@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "name": "hotplace-seoul-population",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}
