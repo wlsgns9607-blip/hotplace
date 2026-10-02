@@ -226,10 +226,21 @@ async function renderGuComparison(d, guCode, guName) {
   `;
 }
 
-function renderNotes(d, dongName) {
+function renderNotes(d, dongName, guName) {
   const avg = d.total.reduce((a,b)=>a+b,0)/d.total.length;
   const maxVal = Math.max(...d.total);
   const peakHour = d.hour[d.total.indexOf(maxVal)];
+  const minVal = Math.min(...d.total);
+  const lowHour = d.hour[d.total.indexOf(minVal)];
+
+  // 새벽 1~6시 평균
+  const dawnSlice = d.total.slice(1, 7);
+  const dawnAvg = dawnSlice.reduce((a, b) => a + b, 0) / dawnSlice.length;
+
+  // 오후 12~18시 평균
+  const noonSlice = d.total.slice(12, 19);
+  const noonAvg = noonSlice.reduce((a, b) => a + b, 0) / noonSlice.length;
+
   const wdAvg = d.weekday.reduce((a,b)=>a+b,0)/d.weekday.length;
   const weAvg = d.weekend.reduce((a,b)=>a+b,0)/d.weekend.length;
   const sumM = d.male.reduce((a,b)=>a+b,0);
@@ -239,11 +250,43 @@ function renderNotes(d, dongName) {
   const genderType = sumM > sumF ? "남성 우세" : "여성 우세";
 
   $("notes").innerHTML = `
-    <p>📌 <b>[${dongName}] 주요 입지 특성:</b></p>
+    <div style="background: linear-gradient(135deg, rgba(79, 70, 229, 0.05), rgba(59, 130, 246, 0.05)); border: 1px solid rgba(79, 70, 229, 0.2); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+      <h3 style="color: #4f46e5; margin: 0 0 12px; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+        <span>🎯</span> [하위목표 1 결과 분석] ${guName} ${dongName} 핫플레이스 방문 전략 가이드
+      </h3>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 14px;">
+        <div style="background: white; padding: 14px 16px; border-radius: 8px; border-left: 4px solid #3b82f6; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+          <b style="color: #1e40af; font-size: 0.95rem;">🌙 새벽 1~6시 인구 분석 (상주 거주자 추정)</b>
+          <p style="margin: 6px 0 0; color: #475569; font-size: 0.88rem; line-height: 1.5;">
+            새벽 평균 <b>${fmt(dawnAvg)}명</b> (최저 <b>${lowHour}시: ${fmt(minVal)}명</b>)을 기록합니다.<br>
+            이 시간대는 외부 유동인구가 거의 없으므로 <b>${dongName}에 실제 거주하는 상주인구</b>로 추정됩니다.
+          </p>
+        </div>
+
+        <div style="background: white; padding: 14px 16px; border-radius: 8px; border-left: 4px solid #ef4444; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+          <b style="color: #b91c1c; font-size: 0.95rem;">🔥 12~18시 최대 인구 밀집 (오후 피크 타임)</b>
+          <p style="margin: 6px 0 0; color: #475569; font-size: 0.88rem; line-height: 1.5;">
+            오후 평균 <b>${fmt(noonAvg)}명</b>, 최고 <b>${peakHour}시(${fmt(maxVal)}명)</b>로 치솟습니다.<br>
+            상주인구 대비 대규모 외부 인파가 집중 유입되는 핵심 혼잡 시간대입니다.
+          </p>
+        </div>
+      </div>
+
+      <div style="background: white; padding: 14px 16px; border-radius: 8px; border-left: 4px solid #10b981; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+        <b style="color: #065f46; font-size: 0.95rem;">💡 실전 방문 &amp; 약속 골든타임 가이드</b>
+        <p style="margin: 6px 0 0; color: #334155; font-size: 0.88rem; line-height: 1.6;">
+          • <b>브런치/카페 약속:</b> 인파가 본격 몰리기 직전인 <b>10~11시쯤</b> 방문하면 웨이팅 없이 여유로운 이용이 가능합니다.<br>
+          • <b>저녁 모임 약속:</b> 퇴근 및 쇼핑 인파가 점차 빠져나가는 <b>19시 이후</b>에 잡으면 혼잡도가 크게 낮아져 쾌적합니다.
+        </p>
+      </div>
+    </div>
+
+    <p>📌 <b>[${dongName}] 기본 입지 속성:</b></p>
     <ul>
       <li><b>상권 유형:</b> ${mainType} (주중 평균 ${fmt(wdAvg)}명 vs 주말 ${fmt(weAvg)}명)</li>
-      <li><b>핵심 피크 타임:</b> 하루 중 유동인구가 가장 몰리는 시간은 <b>${peakHour}시 (${fmt(maxVal)}명)</b>입니다.</li>
-      <li><b>타겟 타겟층 비중:</b> 성별 분포는 <b>${genderType}</b> 특성을 가집니다. (남성 ${Math.round(sumM/(sumM+sumF)*100)}% : 여성 ${Math.round(sumF/(sumM+sumF)*100)}%)</li>
+      <li><b>피크 및 최저:</b> 24시간 중 최고점은 <b>${peakHour}시 (${fmt(maxVal)}명)</b>, 최저점은 <b>${lowHour}시 (${fmt(minVal)}명)</b>입니다.</li>
+      <li><b>성별 비중:</b> 성별 분포는 <b>${genderType}</b> 특성을 보입니다. (남성 ${Math.round(sumM/(sumM+sumF)*100)}% : 여성 ${Math.round(sumF/(sumM+sumF)*100)}%)</li>
     </ul>
   `;
 }
@@ -261,15 +304,28 @@ async function updateDong(code) {
   renderBar(d);
   renderPie(d);
   renderGuComparison(d, guCode, guName);
-  renderNotes(d, name);
+  renderNotes(d, name, guName);
 }
 
-function updateDongSelect(guName) {
+function updateDongSelect(guName, targetDongCode = null) {
   const filtered = dongs.filter(d => d.gu === guName);
   const dongSel = $("dongSelect");
   dongSel.innerHTML = filtered.map(d => `<option value="${d.code}">${d.name}</option>`).join("");
-  if (filtered.length > 0) {
+  
+  if (targetDongCode && filtered.some(d => d.code === targetDongCode)) {
+    dongSel.value = targetDongCode;
+    updateDong(targetDongCode);
+  } else if (filtered.length > 0) {
     updateDong(filtered[0].code);
+  }
+}
+
+function selectApgujeong() {
+  const apgu = dongs.find(d => d.name.includes("압구정"));
+  if (apgu) {
+    $("guSelect").value = apgu.gu;
+    updateDongSelect(apgu.gu, apgu.code);
+    window.scrollTo({ top: $("kpiContainer").offsetTop - 120, behavior: "smooth" });
   }
 }
 
@@ -284,9 +340,19 @@ async function init() {
   guSel.addEventListener("change", e => updateDongSelect(e.target.value));
   $("dongSelect").addEventListener("change", e => updateDong(e.target.value));
 
+  const quickBtn = $("quickApgujeongBtn");
+  if (quickBtn) {
+    quickBtn.addEventListener("click", selectApgujeong);
+  }
+
   await loadSeoul();
   
-  if (gus.length > 0) {
+  // Default to Apgujeong if available, otherwise first gu
+  const apgu = dongs.find(d => d.name.includes("압구정"));
+  if (apgu) {
+    guSel.value = apgu.gu;
+    updateDongSelect(apgu.gu, apgu.code);
+  } else if (gus.length > 0) {
     guSel.value = gus[0];
     updateDongSelect(gus[0]);
   }
