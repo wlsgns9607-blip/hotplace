@@ -4,17 +4,27 @@ const H = Array.from({length: 24}, (_, i) => i);
 let dongs = [];
 
 let staticData = null;
+async function getStaticData() {
+  if (!staticData) {
+    const res = await fetch("data.json");
+    staticData = await res.json();
+  }
+  return staticData;
+}
+
 async function loadList() {
   try { 
     const r = await fetch("/api/dongs"); 
     if (!r.ok) throw 0; 
     return await r.json(); 
   } catch(e) {
-    if (!staticData) {
-      const res = await fetch("data.json");
-      staticData = await res.json();
-    }
-    return staticData.dongs;
+    const data = await getStaticData();
+    if (Array.isArray(data.dongs)) return data.dongs;
+    return Object.entries(data.dongs).map(([code, item]) => ({
+      code,
+      gu: item.gu,
+      name: item.name
+    }));
   }
 }
 
@@ -22,13 +32,21 @@ async function loadDong(code) {
   try { 
     const r = await fetch("/api/dong/" + code); 
     if (!r.ok) throw 0; 
-    return await r.json(); 
+    const res = await r.json();
+    if (!res.hour) res.hour = H;
+    return res;
   } catch(e) {
-    if (!staticData) {
-      const res = await fetch("data.json");
-      staticData = await res.json();
-    }
-    return staticData.series[code];
+    const data = await getStaticData();
+    const item = (data.series && data.series[code]) || (data.dongs && data.dongs[code]);
+    if (!item) return null;
+    return {
+      hour: item.hour || H,
+      total: item.total,
+      weekday: item.weekday,
+      weekend: item.weekend,
+      male: item.male,
+      female: item.female
+    };
   }
 }
 
@@ -36,13 +54,21 @@ async function loadGu(guCode) {
   try { 
     const r = await fetch("/api/gu/" + guCode); 
     if (!r.ok) throw 0; 
-    return await r.json(); 
+    const res = await r.json();
+    if (!res.hour) res.hour = H;
+    return res;
   } catch(e) {
-    if (!staticData) {
-      const res = await fetch("data.json");
-      staticData = await res.json();
-    }
-    return staticData.gus ? staticData.gus[guCode] : null;
+    const data = await getStaticData();
+    const item = data.gus ? data.gus[guCode] : null;
+    if (!item) return null;
+    return {
+      hour: item.hour || H,
+      total: item.total,
+      weekday: item.weekday,
+      weekend: item.weekend,
+      male: item.male,
+      female: item.female
+    };
   }
 }
 
@@ -54,20 +80,21 @@ async function loadSeoul() {
   } catch(e) {}
   
   if (!seoulData) {
-    if (!staticData) {
-      const res = await fetch("data.json");
-      staticData = await res.json();
-    }
-    seoulData = staticData.seoul;
+    const data = await getStaticData();
+    seoulData = data.seoul;
   }
-  if (seoulData) renderSeoulChart(seoulData);
+  if (seoulData) {
+    if (!seoulData.hour) seoulData.hour = H;
+    renderSeoulChart(seoulData);
+  }
 }
 
 let seoulChartInstance = null;
 function renderSeoulChart(d) {
+  const hourArr = d.hour || H;
   const avg = d.total.reduce((a, b) => a + b, 0) / d.total.length;
   const maxVal = Math.max(...d.total);
-  const peakHour = d.hour[d.total.indexOf(maxVal)];
+  const peakHour = hourArr[d.total.indexOf(maxVal)] ?? d.total.indexOf(maxVal);
   const wdAvg = d.weekday.reduce((a, b) => a + b, 0) / d.weekday.length;
   const weAvg = d.weekend.reduce((a, b) => a + b, 0) / d.weekend.length;
 
@@ -108,11 +135,12 @@ function renderSeoulChart(d) {
 let lineChart, barChart, pieChart, guChart;
 
 function renderKpis(d) {
+  const hourArr = d.hour || H;
   const avg = d.total.reduce((a,b)=>a+b,0)/d.total.length;
   const maxVal = Math.max(...d.total);
-  const peakHour = d.hour[d.total.indexOf(maxVal)];
+  const peakHour = hourArr[d.total.indexOf(maxVal)] ?? d.total.indexOf(maxVal);
   const minVal = Math.min(...d.total);
-  const lowHour = d.hour[d.total.indexOf(minVal)];
+  const lowHour = hourArr[d.total.indexOf(minVal)] ?? d.total.indexOf(minVal);
   
   $("kpiContainer").innerHTML = `
     <div class="badge">📊 24시간 평균 <b>${fmt(avg)}명</b></div>
@@ -227,11 +255,12 @@ async function renderGuComparison(d, guCode, guName) {
 }
 
 function renderNotes(d, dongName, guName) {
+  const hourArr = d.hour || H;
   const avg = d.total.reduce((a,b)=>a+b,0)/d.total.length;
   const maxVal = Math.max(...d.total);
-  const peakHour = d.hour[d.total.indexOf(maxVal)];
+  const peakHour = hourArr[d.total.indexOf(maxVal)] ?? d.total.indexOf(maxVal);
   const minVal = Math.min(...d.total);
-  const lowHour = d.hour[d.total.indexOf(minVal)];
+  const lowHour = hourArr[d.total.indexOf(minVal)] ?? d.total.indexOf(minVal);
 
   // 새벽 1~6시 평균
   const dawnSlice = d.total.slice(1, 7);
